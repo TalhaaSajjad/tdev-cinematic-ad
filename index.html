@@ -1,0 +1,268 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>TDev Spot — Cinematic Ad</title>
+<meta name="description" content="A self-playing cinematic brand spot for TDev — built with vanilla HTML, CSS and Canvas. Design. Develop. Deploy.">
+<meta property="og:title" content="TDev — Build what's next">
+<meta property="og:description" content="An 18-second cinematic developer-brand spot, hand-built with HTML/CSS/Canvas.">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+:root{
+  --ink:#06080d; --panel:#0c1018; --line:#1b2233;
+  --fg:#e8edfb; --mut:#8793ad; --dim:#5a6480;
+  --blue:#5b8cff; --cyan:#35e0d0; --violet:#9a7bff; --mint:#28e0b0;
+  --code-kw:#9a7bff; --code-fn:#5b8cff; --code-str:#35e0d0; --code-com:#5f6b85; --code-num:#ffb86b;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{
+  margin:0; background:
+    radial-gradient(900px 500px at 50% -10%, #11182b 0%, transparent 60%),
+    radial-gradient(700px 600px at 100% 120%, #0f1626 0%, transparent 55%),
+    var(--ink);
+  color:var(--fg);
+  font-family:"Space Grotesk",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+  display:flex; flex-direction:column; align-items:center; justify-content:center;
+  min-height:100%;
+  padding:max(16px,env(safe-area-inset-left,0px)) max(16px,env(safe-area-inset-right,0px));
+  padding-block:24px;
+}
+.wrap{width:100%; max-width:980px}
+.stage{
+  position:relative; width:100%; aspect-ratio:16/9; max-width:100%;
+  background:#04060b; border:1px solid var(--line); border-radius:16px;
+  overflow:hidden; isolation:isolate; box-shadow:0 30px 80px -30px rgba(0,0,0,.9);
+}
+#pf{position:absolute; inset:0; z-index:1; width:100%; height:100%; display:block}
+.bars{position:absolute; left:0; right:0; z-index:40; background:#000; pointer-events:none; transition:height .9s cubic-bezier(.7,0,.2,1)}
+.bar-t{top:0; height:50%} .bar-b{bottom:0; height:50%}
+.playing .bar-t,.playing .bar-b{height:9%}
+.vig{position:absolute; inset:0; z-index:30; pointer-events:none; background:radial-gradient(ellipse at center,transparent 50%,rgba(0,0,0,.72) 100%)}
+.grain{position:absolute; inset:0; z-index:31; pointer-events:none; opacity:.045; mix-blend-mode:screen;
+  background-image:radial-gradient(#fff .6px,transparent .6px); background-size:3px 3px}
+
+.scene{position:absolute; inset:0; z-index:10; display:flex; flex-direction:column; align-items:center; justify-content:center;
+  opacity:0; transition:opacity .7s ease; padding:7% 8%; text-align:center}
+.scene.active{opacity:1}
+
+.eyebrow{font-size:clamp(9px,1.5vw,13px); letter-spacing:.42em; text-transform:uppercase; color:var(--cyan); font-weight:500}
+.headline{font-weight:500; line-height:1.08; letter-spacing:-.01em; color:var(--fg); text-wrap:balance}
+.h-xl{font-size:clamp(22px,5.4vw,52px)}
+.h-lg{font-size:clamp(18px,4.2vw,40px)}
+.soft{color:var(--mut)}
+
+.rise>*{opacity:0; transform:translateY(26px); filter:blur(6px)}
+.active.rise>*{animation:rise .9s cubic-bezier(.2,.75,.25,1) forwards}
+.active.rise>*:nth-child(1){animation-delay:.25s}
+.active.rise>*:nth-child(2){animation-delay:.5s}
+.active.rise>*:nth-child(3){animation-delay:.78s}
+@keyframes rise{to{opacity:1; transform:none; filter:blur(0)}}
+
+.editor{width:min(78%,560px); background:rgba(10,14,22,.82); border:1px solid var(--line); border-radius:12px;
+  overflow:hidden; text-align:left; backdrop-filter:blur(2px); box-shadow:0 20px 60px -24px rgba(0,0,0,.8)}
+.ed-bar{display:flex; align-items:center; gap:7px; padding:10px 14px; border-bottom:1px solid var(--line); background:rgba(255,255,255,.02)}
+.dot{width:11px; height:11px; border-radius:50%}
+.ed-name{margin-left:10px; font:500 12px/1 "JetBrains Mono",monospace; color:var(--mut)}
+.code{margin:0; padding:16px 18px; font:400 clamp(11px,1.7vw,15px)/1.75 "JetBrains Mono",ui-monospace,monospace; color:var(--fg)}
+.code .ln{opacity:0; transform:translateX(-6px)}
+.code .ln.show{opacity:1; transform:none; transition:all .3s ease}
+.kw{color:var(--code-kw)} .fn{color:var(--code-fn)} .str{color:var(--code-str)} .com{color:var(--code-com)} .num{color:var(--code-num)}
+
+.device{width:min(72%,520px); background:var(--panel); border:1px solid var(--line); border-radius:14px; overflow:hidden; text-align:left;
+  box-shadow:0 24px 70px -28px rgba(0,0,0,.85)}
+.d-top{display:flex; align-items:center; gap:8px; padding:11px 14px; border-bottom:1px solid var(--line)}
+.d-top .brand{font:500 13px/1 "Space Grotesk",sans-serif; color:var(--fg); letter-spacing:.02em}
+.d-top .brand b{color:var(--blue)}
+.d-nav{margin-left:auto; display:flex; gap:14px; font-size:11px; color:var(--mut)}
+.d-body{padding:16px; display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px}
+.stat{grid-column:span 1; background:rgba(255,255,255,.025); border:1px solid var(--line); border-radius:10px; padding:11px 12px}
+.stat .k{font-size:10px; letter-spacing:.14em; text-transform:uppercase; color:var(--mut)}
+.stat .v{font:500 clamp(15px,2.6vw,22px)/1.2 "Space Grotesk",sans-serif; margin-top:5px; color:var(--fg)}
+.stat .v .up{color:var(--mint); font-size:.6em; margin-left:6px}
+.chart{grid-column:span 3; height:74px; background:rgba(255,255,255,.02); border:1px solid var(--line); border-radius:10px; position:relative; overflow:hidden}
+.chart svg{position:absolute; inset:0; width:100%; height:100%}
+.chart path.area{fill:url(#g1); opacity:.9}
+.chart path.lnp{fill:none; stroke:var(--blue); stroke-width:2; stroke-dasharray:600; stroke-dashoffset:600}
+.active .chart path.lnp{animation:draw 1.6s ease .3s forwards}
+@keyframes draw{to{stroke-dashoffset:0}}
+.reveal{opacity:0; transform:translateY(12px) scale(.98)}
+.active .reveal{animation:pop .6s cubic-bezier(.2,.75,.25,1) forwards}
+.active .reveal:nth-child(1){animation-delay:.15s}
+.active .reveal:nth-child(2){animation-delay:.3s}
+.active .reveal:nth-child(3){animation-delay:.45s}
+.active .reveal:nth-child(4){animation-delay:.6s}
+@keyframes pop{to{opacity:1; transform:none}}
+
+.kin{font-weight:500; line-height:1.02; letter-spacing:-.02em}
+.kin .w{display:block; font-size:clamp(28px,8.5vw,84px); opacity:0; transform:translateY(30px) scale(.94); filter:blur(8px)}
+.kin .w b{font-weight:500}
+.w1 b{color:var(--blue)} .w2 b{color:var(--cyan)} .w3 b{color:var(--violet)}
+.active .kin .w{animation:kinup .7s cubic-bezier(.2,.75,.25,1) forwards}
+.active .kin .w1{animation-delay:.15s} .active .kin .w2{animation-delay:.5s} .active .kin .w3{animation-delay:.85s}
+@keyframes kinup{to{opacity:1; transform:none; filter:blur(0)}}
+
+.logo{display:flex; align-items:baseline; gap:2px; font-weight:500; letter-spacing:-.02em; font-size:clamp(40px,12vw,120px); opacity:0; transform:scale(.92); filter:blur(10px)}
+.logo .t{color:var(--fg)} .logo .dev{color:var(--blue)} .logo .sq{color:var(--cyan)}
+.active .logo{animation:logoin 1s cubic-bezier(.2,.75,.25,1) .3s forwards}
+@keyframes logoin{to{opacity:1; transform:none; filter:blur(0)}}
+.rule{width:0; height:2px; background:linear-gradient(90deg,transparent,var(--blue),var(--cyan),transparent); margin:18px auto 0}
+.active .rule{animation:rule 1s ease .9s forwards}
+@keyframes rule{to{width:64%}}
+.tag{font-size:clamp(11px,2.2vw,18px); letter-spacing:.4em; text-transform:uppercase; color:var(--mut); margin-top:16px; opacity:0}
+.active .tag{animation:fin .9s ease 1.3s forwards}
+.cta{margin-top:18px; font:400 clamp(10px,1.8vw,14px)/1 "JetBrains Mono",monospace; color:var(--cyan); opacity:0}
+.active .cta{animation:fin .9s ease 1.7s forwards}
+@keyframes fin{to{opacity:1}}
+
+.sweep{position:absolute; top:-20%; left:-50%; width:36%; height:140%; z-index:20; transform:skewX(-14deg); opacity:0;
+  background:linear-gradient(100deg,transparent,rgba(120,170,255,.22),transparent)}
+.active .sweep{animation:sweep 1.9s ease .3s forwards}
+@keyframes sweep{0%{left:-50%;opacity:0}15%{opacity:1}100%{left:150%;opacity:0}}
+.caret{display:inline-block; width:8px; height:1.05em; background:var(--cyan); vertical-align:-2px; margin-left:2px; animation:blink 1s steps(1) infinite}
+@keyframes blink{50%{opacity:0}}
+
+.controls{display:flex; align-items:center; justify-content:center; gap:10px; margin-top:16px; flex-wrap:wrap}
+.btn{display:inline-flex; align-items:center; gap:8px; padding:10px 18px; background:transparent; color:var(--fg);
+  border:1px solid var(--line); border-radius:10px; font:500 13px/1 "Space Grotesk",sans-serif; cursor:pointer; transition:.2s; text-decoration:none}
+.btn:hover{border-color:var(--blue); background:rgba(91,140,255,.08)}
+.btn .i{font-size:16px; line-height:0}
+.cap{color:var(--mut); font-size:12px; margin-top:10px; text-align:center}
+.cap a{color:var(--cyan); text-decoration:none}
+@media (prefers-reduced-motion:reduce){*{animation-duration:.001s!important; transition-duration:.001s!important}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="stage playing" id="stage">
+    <canvas id="pf"></canvas>
+
+    <section class="scene rise active" data-s="1">
+      <div class="eyebrow">TDev studio</div>
+      <h1 class="headline h-xl">Every product worth<br>using starts as code.</h1>
+      <div class="headline h-lg soft">We write the good kind.</div>
+    </section>
+
+    <section class="scene" data-s="2">
+      <div class="sweep"></div>
+      <div class="editor">
+        <div class="ed-bar">
+          <span class="dot" style="background:#ff5f57"></span>
+          <span class="dot" style="background:#febc2e"></span>
+          <span class="dot" style="background:#28c840"></span>
+          <span class="ed-name">ship.ts</span>
+        </div>
+        <pre class="code" id="code"><span class="ln"><span class="com">// build. test. ship. repeat.</span></span>
+<span class="ln"><span class="kw">export async function</span> <span class="fn">deploy</span>(app: App) {</span>
+<span class="ln">  <span class="kw">const</span> build = <span class="kw">await</span> <span class="fn">compile</span>(app, { fast: <span class="kw">true</span> })</span>
+<span class="ln">  <span class="kw">await</span> <span class="fn">test</span>(build) <span class="com">// 0 failing</span></span>
+<span class="ln">  <span class="kw">return</span> <span class="fn">release</span>(build, <span class="str">'production'</span>) <span class="num">// ship it</span></span>
+<span class="ln">}</span></pre>
+      </div>
+    </section>
+
+    <section class="scene" data-s="3">
+      <div class="sweep"></div>
+      <div class="device">
+        <div class="d-top reveal">
+          <span class="brand">T<b>Dev</b> · console</span>
+          <span class="d-nav"><span>Overview</span><span>Builds</span><span>Users</span></span>
+        </div>
+        <div class="d-body">
+          <div class="stat reveal"><div class="k">Deploys</div><div class="v">1,284<span class="up">▲ 18%</span></div></div>
+          <div class="stat reveal"><div class="k">Uptime</div><div class="v">99.98%</div></div>
+          <div class="stat reveal"><div class="k">Latency</div><div class="v">42<span style="font-size:.6em;color:var(--mut)">ms</span></div></div>
+          <div class="chart reveal">
+            <svg viewBox="0 0 400 74" preserveAspectRatio="none">
+              <defs><linearGradient id="g1" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0" stop-color="#5b8cff" stop-opacity=".35"/>
+                <stop offset="1" stop-color="#5b8cff" stop-opacity="0"/>
+              </linearGradient></defs>
+              <path class="area" d="M0,58 L40,52 L80,56 L120,40 L160,44 L200,30 L240,34 L280,20 L320,24 L360,12 L400,16 L400,74 L0,74 Z"/>
+              <path class="lnp" d="M0,58 L40,52 L80,56 L120,40 L160,44 L200,30 L240,34 L280,20 L320,24 L360,12 L400,16"/>
+            </svg>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="scene" data-s="4">
+      <div class="sweep"></div>
+      <div class="kin">
+        <span class="w w1"><b>Design.</b></span>
+        <span class="w w2"><b>Develop.</b></span>
+        <span class="w w3"><b>Deploy.</b></span>
+      </div>
+    </section>
+
+    <section class="scene" data-s="5">
+      <div class="sweep"></div>
+      <div class="logo"><span class="t">T</span><span class="dev">Dev</span><span class="sq">.</span></div>
+      <div class="rule"></div>
+      <div class="tag">Build what's next</div>
+      <div class="cta">talhabinsajjad1234@gmail.com</div>
+    </section>
+
+    <div class="bars bar-t"></div>
+    <div class="bars bar-b"></div>
+    <div class="vig"></div>
+    <div class="grain"></div>
+  </div>
+
+  <div class="controls">
+    <button class="btn" id="replay"><span class="i">▶</span> Replay</button>
+    <a class="btn" href="https://github.com/TalhaaSajjad" target="_blank" rel="noopener"><span class="i">★</span> Hire me</a>
+  </div>
+  <div class="cap">TDev — cinematic spot · 18s · plays automatically · <a href="https://github.com/TalhaaSajjad">github.com/TalhaaSajjad</a></div>
+</div>
+
+<script>
+(function(){
+  var stage=document.getElementById('stage');
+  var scenes=[].slice.call(document.querySelectorAll('.scene'));
+  var codeLines=[].slice.call(document.querySelectorAll('#code .ln'));
+  var replay=document.getElementById('replay');
+  var timers=[], raf;
+
+  var cv=document.getElementById('pf'), ctx=cv.getContext('2d'), DPR=Math.min(2,window.devicePixelRatio||1);
+  var W=0,H=0,parts=[];
+  function size(){ var r=stage.getBoundingClientRect(); W=cv.width=r.width*DPR; H=cv.height=r.height*DPR; }
+  function seed(){ parts=[]; var n=Math.round((W*H)/(28000*DPR)); for(var i=0;i<n;i++){ parts.push({x:Math.random()*W,y:Math.random()*H,z:Math.random()*.8+.2,vx:(Math.random()-.5)*.12*DPR,vy:(Math.random()-.5)*.12*DPR}); } }
+  function draw(){
+    ctx.clearRect(0,0,W,H);
+    for(var i=0;i<parts.length;i++){ var p=parts[i]; p.x+=p.vx*p.z; p.y+=p.vy*p.z;
+      if(p.x<0)p.x=W; if(p.x>W)p.x=0; if(p.y<0)p.y=H; if(p.y>H)p.y=0;
+      ctx.beginPath(); ctx.arc(p.x,p.y,p.z*1.6*DPR,0,6.28);
+      ctx.fillStyle='rgba('+(120+p.z*40|0)+','+(150+p.z*60|0)+',255,'+(p.z*.5)+')'; ctx.fill();
+    }
+    for(var a=0;a<parts.length;a++){ for(var b=a+1;b<parts.length;b++){ var dx=parts[a].x-parts[b].x,dy=parts[a].y-parts[b].y,d=dx*dx+dy*dy; if(d<(90*DPR)*(90*DPR)){ ctx.strokeStyle='rgba(91,140,255,'+(.10*(1-d/((90*DPR)*(90*DPR))))+')'; ctx.lineWidth=.6*DPR; ctx.beginPath(); ctx.moveTo(parts[a].x,parts[a].y); ctx.lineTo(parts[b].x,parts[b].y); ctx.stroke(); } } }
+    raf=requestAnimationFrame(draw);
+  }
+
+  function clearTimers(){ timers.forEach(clearTimeout); timers=[]; }
+  function at(ms,fn){ timers.push(setTimeout(fn,ms)); }
+  function show(n){ scenes.forEach(function(s){ s.classList.toggle('active', s.getAttribute('data-s')==String(n)); }); }
+  function typeCode(){ codeLines.forEach(function(l){l.classList.remove('show');}); codeLines.forEach(function(l,i){ at(300+i*260,function(){ l.classList.add('show'); }); }); }
+
+  function run(){
+    clearTimers();
+    stage.classList.remove('playing'); scenes.forEach(function(s){s.classList.remove('active');});
+    void stage.offsetWidth;
+    at(60,function(){ stage.classList.add('playing'); });
+    at(500,function(){ show(1); });
+    at(3400,function(){ show(2); typeCode(); });
+    at(7100,function(){ show(3); });
+    at(10600,function(){ show(4); });
+    at(13700,function(){ show(5); });
+  }
+
+  function boot(){ size(); seed(); if(!raf) draw(); run(); }
+  window.addEventListener('resize', function(){ size(); seed(); });
+  replay.addEventListener('click', run);
+  setTimeout(boot, 250);
+})();
+</script>
+</body>
+</html>
